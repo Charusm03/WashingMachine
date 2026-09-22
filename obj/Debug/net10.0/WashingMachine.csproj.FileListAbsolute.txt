@@ -1,0 +1,14 @@
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\bin\Debug\net10.0\WashingMachine.exe
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\bin\Debug\net10.0\WashingMachine.deps.json
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\bin\Debug\net10.0\WashingMachine.runtimeconfig.json
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\bin\Debug\net10.0\WashingMachine.dll
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\bin\Debug\net10.0\WashingMachine.pdb
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\obj\Debug\net10.0\WashingMachine.GeneratedMSBuildEditorConfig.editorconfig
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\obj\Debug\net10.0\WashingMachine.AssemblyInfoInputs.cache
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\obj\Debug\net10.0\WashingMachine.AssemblyInfo.cs
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\obj\Debug\net10.0\WashingMachine.csproj.CoreCompileInputs.cache
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\obj\Debug\net10.0\WashingMachine.dll
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\obj\Debug\net10.0\refint\WashingMachine.dll
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\obj\Debug\net10.0\WashingMachine.pdb
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\obj\Debug\net10.0\WashingMachine.genruntimeconfig.cache
+D:\Charu\VSS_WS\Learnings\WashingMachine\WashingMachine\WashingMachine\obj\Debug\net10.0\ref\WashingMachine.dll
