@@ -9,16 +9,32 @@ namespace WashingMachine.Services
 {
     internal class WashingService : IWashingService
     {
-        private readonly WashingConfiguration _configurations;
         internal WashingService(WashingConfiguration configurations)
         {
             _configurations = configurations;
         }
-        public MachineData StartWashing(
-            WashingPattern pattern,
-            ClothType cloth,List<WashingMode> methods,int load)
+        internal event EventHandler<StagesEventArgs> StageStarted;
+        internal event EventHandler<StagesEventArgs> StageCompleted;
+        internal event EventHandler<ClothesAddedEventArgs> ClothesAdded;
+        internal event EventHandler<WashingCompletedEventArgs> WashingCompleted;
+        private readonly WashingConfiguration _configurations;
+        TimerService _timerService = new TimerService();
+        protected virtual void OnStageStarted(StagesEventArgs e)
         {
-            if(methods.Count==0 || methods == null)
+            StageStarted?.Invoke(this, e);
+        }
+        protected virtual void OnStageCompleted(StagesEventArgs e)
+        {
+            StageCompleted?.Invoke(this, e);
+        }
+
+        protected virtual void OnWashingCompleted(WashingCompletedEventArgs e)
+        {
+            WashingCompleted?.Invoke(this, e);
+        }
+        public MachineData StartWashing(WashingPattern pattern, ClothType cloth, List<WashingMode> methods, int load)
+        {
+            if (methods == null || methods.Count == 0)
             {
                 throw new InvalidOperationException("At least one wash method must be selected.");
             }
@@ -27,32 +43,59 @@ namespace WashingMachine.Services
                 throw new InvalidOperationException("Load must be greater than zero.");
             }
             TimeSpan totalTimeRemaining = TimeSpan.Zero;
+
             foreach (var mode in methods)
             {
                 totalTimeRemaining += _configurations.GetDuration(pattern, mode, cloth);
             }
-            Console.WriteLine("\nWashing machine started!");
             MachineData machineData = new MachineData
             {
                 WashingPattern = pattern,
                 ClothType = cloth,
-                WashMethods=methods,
+                WashMethods = methods,
                 CurrentMode = methods[0],
-                Load=load,
-                ElapsedTime=TimeSpan.Zero,
+                Load = load,
+                ElapsedTime = TimeSpan.Zero,
                 Progress = 0,
                 Status = MachineStatus.Idle,
-                RemainingTime = TimeSpan.Zero,
+                RemainingTime = totalTimeRemaining,
             };
             return machineData;
         }
-
-        private TimeSpan GetDuration(WashingPattern pattern, ClothType cloth, WashingMode mode)
+        internal async Task RunWashingCycleAsync(MachineData machineData, CancellationToken cancellationToken)
         {
-            return (pattern, cloth, mode) switch
+            machineData.Status = MachineStatus.Running;
+            TimeSpan baselineRemainingTime = machineData.RemainingTime;
+            TimeSpan totalCompletedStagesDuration = TimeSpan.Zero;
+            foreach (var mode in machineData.WashMethods)
             {
-                (WashingPattern.Quick, ClothType.Wool, WashingMode.Spin) => TimeSpan.FromMinutes(15),
-            };
+                machineData.CurrentMode = mode;
+
+                TimeSpan stageDuration = _configurations.GetDuration(machineData.WashingPattern, mode, machineData.ClothType);
+                OnStageStarted(new StagesEventArgs(mode, stageDuration));
+
+                var progress = new Progress<int>(percent =>
+                {
+                    lock (machineData.SyncRoot)
+                    {
+                        machineData.Progress = percent;
+                        double currentStageElapsedMs = (percent / 100.0) * stageDuration.TotalMilliseconds;
+                        TimeSpan totalTimeElapsedSoFar = totalCompletedStagesDuration + TimeSpan.FromMilliseconds(currentStageElapsedMs);
+
+                        machineData.ElapsedTime = totalTimeElapsedSoFar;
+                        machineData.RemainingTime = baselineRemainingTime - totalTimeElapsedSoFar;
+                    }
+                });
+
+                await _timerService.RunAsync(stageDuration, progress, cancellationToken);
+                totalCompletedStagesDuration += stageDuration;
+                OnStageCompleted(new StagesEventArgs(mode, stageDuration));
+            }
+
+            machineData.Status = MachineStatus.Completed;
+            machineData.RemainingTime = TimeSpan.Zero;
+            machineData.Progress = 100;
+            OnWashingCompleted(new WashingCompletedEventArgs(machineData));
         }
     }
 }

@@ -32,15 +32,15 @@ namespace WashingMachine.Models
         };
         public TimeSpan GetDuration(WashingPattern pattern, WashingMode mode, ClothType type)
         {
-            if(!BaseDurations.TryGetValue(mode,out var baseDuration))
+            if (!BaseDurations.TryGetValue(mode, out var baseDuration))
             {
                 throw new KeyNotFoundException($"No base duration configured for {mode}.");
             }
-            if(!PatternMultipliers.TryGetValue(pattern,out double patternFactor))
+            if (!PatternMultipliers.TryGetValue(pattern, out double patternFactor))
             {
                 throw new KeyNotFoundException($"No multiplier configured for pattern {pattern}.");
             }
-            if(!ClothMultipliers.TryGetValue(type,out double clothFactor))
+            if (!ClothMultipliers.TryGetValue(type, out double clothFactor))
             {
                 throw new KeyNotFoundException($"No multiplier configured for cloth {type}.");
             }

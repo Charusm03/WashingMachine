@@ -6,12 +6,12 @@ namespace WashingMachine
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             WashingConfiguration configurations = new();
             WashingService service = new WashingService(configurations);
             Dashboard dashboard = new Dashboard(service);
-            dashboard.Execute();
+            await dashboard.Execute();
         }
     }
 }

@@ -3,38 +3,115 @@ using System.Collections.Generic;
 using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography;
 using System.Text;
-using WashingMachine.Services;
+using WashingMachine.Models;
 using WashingMachine.Models.Enums;
+using WashingMachine.Services;
 
 namespace WashingMachine.UI
 {
     internal class Dashboard
     {
         private readonly WashingService _washingMachineService;
+        ConsoleRenderer _renderer = new ConsoleRenderer();
         internal Dashboard(WashingService washingMachineService)
         {
             _washingMachineService = washingMachineService;
+            _washingMachineService.StageStarted += (s, e) => _renderer.PushLog($"Stage started: {e.Mode}");
+            _washingMachineService.StageCompleted += (s, e) => _renderer.PushLog($"Stage completed: {e.Mode}");
+            _washingMachineService.WashingCompleted += (s, e) => _renderer.PushNotifications("Washing completed!");
         }
-        internal void Execute()
+        internal async Task Execute()
         {
-            if (!UserInput())
+            using CancellationTokenSource cts = new CancellationTokenSource();
+            cts.CancelAfter(40000);
+            CancellationToken token = cts.Token;
+            try
             {
-                return;
-            }
-            WashingPattern pattern = WashingMachinePattern();
-            ClothType cloth = WashingClothType();
-            List<WashingMode> modes = WashingModeType();
-            int load;
-            while (true)
-            {
-                Console.WriteLine("Enter the load [in KG]:");
-                string loadInKg = Console.ReadLine();
-                if(int.TryParse(loadInKg,out load))
+                if (!UserInput())
                 {
-                    break;
+                    return;
                 }
+                WashingPattern pattern = WashingMachinePattern();
+                ClothType cloth = WashingClothType();
+                List<WashingMode> modes = WashingModeType();
+                int load;
+                while (true)
+                {
+                    Console.WriteLine("Enter the load [in KG]:");
+                    string loadInKg = Console.ReadLine();
+                    if (int.TryParse(loadInKg, out load) && load > 0)
+                    {
+                        break;
+                    }
+                }
+                Console.Clear();
+                var machineData = _washingMachineService.StartWashing(pattern, cloth, modes, load);
+                Console.WriteLine(@$"==========================
+SUMMARY
+==========================
+Washing Pattern :{machineData.WashingPattern}
+Progress        :{machineData.Progress}
+Current mode    :{machineData.CurrentMode}
+Load            :{machineData.Load}
+Cloth Type      :{machineData.ClothType}
+Elapsed Time    :{machineData.ElapsedTime}
+Remaining Time  :{machineData.RemainingTime}");
+                Console.WriteLine("Press any key to start the washing cycle...");
+                Console.ReadKey(intercept: true);
+                Console.WriteLine("\n[RUNNING] Washing machine started!");
+                _renderer.Init();
+                var renderLoop = Task.Run(async () =>
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        MachineData snapshot;
+                        lock (machineData.SyncRoot)
+                        {
+                            snapshot = new MachineData
+                            {
+                                WashingPattern = machineData.WashingPattern,
+                                ClothType = machineData.ClothType,
+                                CurrentMode = machineData.CurrentMode,
+                                Progress = machineData.Progress,
+                                Status = machineData.Status,
+                                Load = machineData.Load,
+                                ElapsedTime = machineData.ElapsedTime,
+                                RemainingTime = machineData.RemainingTime,
+                            };
+                        }
+                        _renderer.RenderMachine(snapshot);
+                        await Task.Delay(100, CancellationToken.None);
+                    }
+                });
+                var inputLoop = Task.Run(() =>
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        var key = Console.ReadKey(true);
+                        if (key.Key == ConsoleKey.Enter)
+                        {
+                            cts.Cancel();
+                        }
+                    }
+                });
+
+                await _washingMachineService.RunWashingCycleAsync(machineData, token);
+                cts.Cancel();
+                await Task.WhenAll(renderLoop, inputLoop).ContinueWith(_ => { });
+                _renderer.PushNotifications("Washing completed! Press any key to finish.");
+                Console.SetCursorPosition(0, 20);
+                Console.ReadKey(true);
             }
-            _washingMachineService.StartWashing(pattern, cloth, modes,load);
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("\n[NOTICE] The wash cycle was cancelled or timed out!");
+                Console.ReadKey();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n[ERROR] An error occurred: {ex.Message}");
+                Console.ReadKey();
+            }
         }
 
         private List<WashingMode> WashingModeType()
@@ -43,33 +120,55 @@ namespace WashingMachine.UI
 [W] Wash
 [R] Rinse
 [P] Spin
-[D] Dry");
+[D] Dry
+[E] Exit");
             List<WashingMode> modes = new();
             while (true)
             {
                 Console.WriteLine("Enter the Washing Modes you prefer [Press E to exit]:");
-                ConsoleKeyInfo key = Console.ReadKey(true);
+                ConsoleKeyInfo key = Console.ReadKey(false);
+                Console.WriteLine();
                 switch (key.Key)
                 {
                     case ConsoleKey.W:
-                        modes.Add( WashingMode.Wash);
+                        if (!modes.Contains(WashingMode.Wash))
+                        {
+                            modes.Add(WashingMode.Wash);
+                            Console.WriteLine("-> Added: Wash");
+                        }
                         continue;
                     case ConsoleKey.R:
-                        modes.Add(WashingMode.Rinse);
+                        if (!modes.Contains(WashingMode.Rinse))
+                        {
+                            modes.Add(WashingMode.Rinse);
+                            Console.WriteLine("-> Added: Rinse");
+                        }
                         continue;
                     case ConsoleKey.P:
-                        modes.Add(WashingMode.Spin);
+                        if (!modes.Contains(WashingMode.Spin))
+                        {
+                            modes.Add(WashingMode.Spin);
+                            Console.WriteLine("-> Added: Spin");
+                        }
                         continue;
                     case ConsoleKey.S:
-                        modes.Add(WashingMode.Soak);
+                        if (!modes.Contains(WashingMode.Soak))
+                        {
+                            modes.Add(WashingMode.Soak);
+                            Console.WriteLine("-> Added: Soak");
+                        }
                         continue;
                     case ConsoleKey.D:
-                        modes.Add(WashingMode.Dry);
+                        if (!modes.Contains(WashingMode.Dry))
+                        {
+                            modes.Add(WashingMode.Dry);
+                            Console.WriteLine("-> Added: Dry");
+                        }
                         continue;
                     case ConsoleKey.E:
                         break;
                     default:
-                        Console.WriteLine("Invalid input. Please select W or R or P or S or D...");
+                        Console.WriteLine("Invalid input. Please select S, W, R, P, D, or E.");
                         continue;
                 }
                 return modes;
@@ -85,8 +184,8 @@ namespace WashingMachine.UI
 [D] Denim");
             while (true)
             {
-                Console.WriteLine("Enter the cloth key:");
-                ConsoleKeyInfo key = Console.ReadKey(true);
+                Console.Write("Enter the cloth key:");
+                ConsoleKeyInfo key = Console.ReadKey(false);
                 switch (key.Key)
                 {
                     case ConsoleKey.S:
@@ -116,25 +215,24 @@ namespace WashingMachine.UI
             {
                 Console.WriteLine(@"
 [S] Start 
-[E] Exit
-Press any Key:");
-                ConsoleKeyInfo key = Console.ReadKey(true);
+[E] Exit");
+                Console.Write("Selection: ");
+                ConsoleKeyInfo key = Console.ReadKey(false);
+                Console.WriteLine();
+
                 if (key.Key == ConsoleKey.S)
                 {
-                    Console.WriteLine("\nWELCOME TO THE WASHING MACHINE'S HOME PAGE");
+                    Console.WriteLine("\nWELCOME TO THE WASHING MACHINE HOME PAGE");
                     return true;
                 }
-                else if (key.Key == ConsoleKey.E)
+                if (key.Key == ConsoleKey.E)
                 {
-                    Console.WriteLine("\nExiting the application");
+                    Console.WriteLine("\nExiting the application...");
                     Thread.Sleep(1000);
                     return false;
                 }
-                else
-                {
-                    Console.WriteLine("\nInvalid choice. Please press S to Start or E to Exit.");
-                }
-                return false;
+
+                Console.WriteLine("Invalid choice. Please press S to Start or E to Exit.");
             }
         }
 
@@ -147,7 +245,7 @@ Press any Key:");
 [S] Standard");
             while (true)
             {
-                ConsoleKeyInfo key = Console.ReadKey(true);
+                ConsoleKeyInfo key = Console.ReadKey(false);
                 WashingPattern pattern;
                 switch (key.Key)
                 {

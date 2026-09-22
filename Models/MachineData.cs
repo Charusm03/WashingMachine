@@ -7,6 +7,7 @@ namespace WashingMachine.Models
 {
     internal class MachineData
     {
+        internal readonly object SyncRoot = new();
         public WashingPattern WashingPattern { get; set; }
         public ClothType ClothType { get; set; }
         public WashingMode CurrentMode { get; set; }

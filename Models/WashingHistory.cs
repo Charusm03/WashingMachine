@@ -6,6 +6,6 @@ namespace WashingMachine.Models
 {
     internal class WashingHistory
     {
-        private Dictionary<DateTime, MachineData> history=new ();
+        private Dictionary<DateTime, MachineData> history = new();
     }
 }
