@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("WashingMachine")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+641fee3b68ed011da2070c6c2bb1a9ef0418aed5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+066378658875a1fc6cda8c0017254dfece974a94")]
 [assembly: System.Reflection.AssemblyProductAttribute("WashingMachine")]
 [assembly: System.Reflection.AssemblyTitleAttribute("WashingMachine")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

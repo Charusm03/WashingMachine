@@ -19,6 +19,9 @@ namespace WashingMachine.UI
             _washingMachineService.StageStarted += (s, e) => _renderer.PushLog($"Stage started: {e.Mode}");
             _washingMachineService.StageCompleted += (s, e) => _renderer.PushLog($"Stage completed: {e.Mode}");
             _washingMachineService.WashingCompleted += (s, e) => _renderer.PushNotifications("Washing completed!");
+            _washingMachineService.ClothesAdded += (s, e) => _renderer.PushNotifications("Clothes Added!");
+            _washingMachineService.WashingPaused += (s, e) => _renderer.PushLog("Washing paused.");
+            _washingMachineService.WashingResumed += (s, e) => _renderer.PushLog("Washing resumed.");
         }
         internal async Task Execute()
         {
@@ -92,6 +95,16 @@ Remaining Time  :{machineData.RemainingTime}");
                         {
                             cts.Cancel();
                         }
+                        else if (key.Key == ConsoleKey.A)
+                        {
+                            _washingMachineService.Pause();
+                            _renderer.PushLog("Paused — add clothes.");
+                            int extra = PromptForExtraLoad();
+
+                            _washingMachineService.AddClothes(machineData, extra);
+                            _washingMachineService.Resume();
+                            _renderer.PushLog($"Resumed. New load: {machineData.Load} kg");
+                        }
                     }
                 });
 
@@ -111,6 +124,37 @@ Remaining Time  :{machineData.RemainingTime}");
             {
                 Console.WriteLine($"\n[ERROR] An error occurred: {ex.Message}");
                 Console.ReadKey();
+            }
+        }
+
+        private int PromptForExtraLoad()
+        {
+            _renderer.Suppress = true;
+            try
+            {
+                lock (typeof(ConsoleRenderer)) // reuse-safe: just needs *some* exclusive window; simplest is a dedicated prompt area
+                {
+                    Console.SetCursorPosition(0, 18);
+                    Console.Write(new string(' ', Console.WindowWidth - 1)); // clear the line first
+                    Console.SetCursorPosition(0, 18);
+                    Console.Write("Enter additional load (kg): ");
+                    while (true)
+                    {
+                        string input = Console.ReadLine();
+                        if (int.TryParse(input, out int extra) && extra > 0)
+                        {
+                            Console.SetCursorPosition(0, 18);
+                            Console.Write(new string(' ', Console.WindowWidth - 1)); // clear prompt line when done
+                            return extra;
+                        }
+                        Console.SetCursorPosition(0, 19);
+                        Console.Write("Invalid input, try again: ".PadRight(Console.WindowWidth - 1));
+                    }
+                }
+            }
+            finally
+            {
+                _renderer.Suppress = false;
             }
         }
 

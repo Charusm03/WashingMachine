@@ -6,6 +6,6 @@ namespace WashingMachine.Services.Interfaces
 {
     internal interface ITimerService
     {
-        Task RunAsync(TimeSpan duration, IProgress<int> progress, CancellationToken cancellationToken);
+        Task RunAsync(TimeSpan duration, IProgress<int> progress, SemaphoreSlim gate, CancellationToken cancellationToken);
     }
 }

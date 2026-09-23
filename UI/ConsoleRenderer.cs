@@ -22,6 +22,7 @@ namespace WashingMachine.UI
         private const int LogStartRow = 15;
         private const int LogMaxRows = 5;
         private readonly Queue<string> logs = new();
+        internal volatile bool Suppress = false;
         internal void Init()
         {
             Console.CursorVisible = false;
@@ -29,6 +30,7 @@ namespace WashingMachine.UI
         }
         internal void RenderMachine(MachineData data)
         {
+            if (Suppress) return;
             lock (_consoleLock)
             {
                 WriteLine(HeaderRow, "==============================");
